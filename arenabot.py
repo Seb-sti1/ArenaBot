@@ -89,8 +89,10 @@ def fitnessRobot(listOfCommands, visualize=True):
     if len(positions) > 1:
         line = LineString(positions)
 
-        if line.intersects(labyrinthe_wall1) or line.intersects(labyrinthe_wall2):
-            distanceFromObjective = 100
+	intersectionMalus = 10
+
+	if line.intersects(labyrinthe_wall1) or line.intersects(labyrinthe_wall2):
+		distanceFromObjective += intersectionMalus
 
     distanceFromObjective += math.sqrt((robotX - objectiveX) ** 2 + (robotY - objectiveY) ** 2)
 
