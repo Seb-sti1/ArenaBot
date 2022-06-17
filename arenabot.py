@@ -11,11 +11,10 @@ from  shapely.geometry import Polygon, LineString
 random_number_generator = random.Random()
 random_number_generator.seed(42) # remember, seeding the generators with a fixed value ensures that you will always obtain the same sequence of numbers at every run 
 
-
 def moveRobot(robotX, robotY, robotDegrees, distance):
 	robotX += distance*math.cos(robotDegrees*math.pi/180)
 	robotY += distance*math.sin(robotDegrees*math.pi/180)
-	return [robotX, robotY]
+	return robotX, robotY
 
 
 def rotateRobot(robotX, robotY, robotDegrees, angle):
@@ -29,7 +28,7 @@ def applicateCommands(robotX, robotY, robotDegrees, listOfCommands):
 
 	for i in range(number_of_commands):
 		robotDegrees = rotateRobot(robotX, robotY, robotDegrees, listOfCommands[2*i])
-		[robotX, robotY] = moveRobot(robotX, robotY, robotDegrees, listOfCommands[2*i+1])
+		(robotX, robotY) = moveRobot(robotX, robotY, robotDegrees, listOfCommands[2*i+1])
 		line_points.append((robotX, robotY))
 
 	return robotX, robotY, robotDegrees, line_points
@@ -80,8 +79,10 @@ def fitnessRobot(listOfCommands, visualize=True) :
 
 	line = LineString(positions)
 
+	intersectionMalus = 10
+
 	if line.intersects(labyrinthe_wall1) or line.intersects(labyrinthe_wall2):
-		distanceFromObjective = np.inf
+		distanceFromObjective += intersectionMalus
 
 
 	distanceFromObjective = math.sqrt((robotX-objectiveX)**2-(robotY-objectiveY)**2)
@@ -136,6 +137,7 @@ def generator_commands(random, args) :
 	for i in range(0, individual_length//2):
 		individual[2*i] = random_number_generator.uniform(minimum_angle, maximum_angle)
 		individual[2*i+1] = random_number_generator.uniform(minimum_distance, maximum_distance)
+
 
 	return individual
 
