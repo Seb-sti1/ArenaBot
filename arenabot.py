@@ -2,6 +2,9 @@
 # by Alberto Tonda, 2018 <alberto.tonda@gmail.com>
 
 import sys
+import inspyred
+import random
+import math
 
 '''This function accepts in input a list of strings, and tries to parse them to update the position of a robot. Then returns distance from objective.'''
 def fitnessRobot(listOfCommands, visualize=False) :
@@ -43,7 +46,7 @@ def fitnessRobot(listOfCommands, visualize=False) :
 	
 	# TODO move robot, check that the robot stays inside the arena and stop movement if a wall is hit
 	# TODO measure distance from objective
-	distanceFromObjective = 0
+	distanceFromObjective = math.sqrt((robotX-objectiveX)**2-(robotY-objectiveY)**2)
 	
 	# this is optional, argument "visualize" has to be explicitly set to "True" when function is called
 	if visualize :
