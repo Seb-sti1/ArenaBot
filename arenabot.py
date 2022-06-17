@@ -98,12 +98,12 @@ def fitnessRobot(listOfCommands, visualize=True):
 
     # distance to the walls
 
-    distanceThresholdForMalus = 2
-    malusGain = 0.2
+    distanceThresholdForMalus = 5
+    malusGain = 8
     closeToWallMalus = 0 # init malus to 0
 
     '''
-    for k in range(len(positions)-1):
+    for k in range(len(positions)-1): # add malus everytime the path is too close
         print(positions[k])
         currentLine = LineString((positions[k]), (positions[k+1]))
         distanceFromWall1 = labyrinthe_wall1.exterior.distance(currentLine)
@@ -119,6 +119,7 @@ def fitnessRobot(listOfCommands, visualize=True):
     distanceFromWall1 = labyrinthe_wall1.exterior.distance(line)
     distanceFromWall2 = labyrinthe_wall2.exterior.distance(line)
     
+    # add malus if the closest point to each walls is below threshold
     # if the distance to the wall is below a threshold, the added malus to the fitness is greater as the path of the robot is close to the walls
     if distanceFromWall1 < distanceThresholdForMalus :
         closeToWallMalus += malusGain*(1-distanceFromWall1/distanceThresholdForMalus)
@@ -175,11 +176,12 @@ def generator_commands(random, args):
     maximum_distance = args["maximum_distance"]  # same goes for the maximum value
 
     max_individual_length = args["max_individual_length"]
+    min_individual_length = args["min_individual_length"]
 
     # the individual will be a series of "number_of_dimensions" random values, generated between "minimum" and "maximum"
     # the individual will be a series of commands (move and rotate)
 
-    individual_length = random_number_generator.randint(10, max_individual_length) // 2 * 2
+    individual_length = random_number_generator.randint(min_individual_length, max_individual_length) // 2 * 2
     individual = np.zeros(individual_length)
 
     for i in range(0, individual_length // 2):
@@ -216,11 +218,12 @@ def main():
         mutation_rate=0.2,  # probability of applying mutation
 
         # all arguments specified below, THAT ARE NOT part of the "evolve" method, will be automatically placed in "args"
-        max_individual_length=20,  # number of dimensions of the problem, used by "generator_weierstrass"
+        min_individual_length=30,
+        max_individual_length=100,  # number of dimensions of the problem, used by "generator_weierstrass"
         minimum_angle=-90,  # minimum angle for generator_commands
         maximum_angle=90,  # maximum angle
         minimum_distance=0,  # minimum distance for generator_commands
-        maximum_distance=1000,  # minimum angle
+        maximum_distance=10,  # minimum angle
     )
 
     # after the evolution is over, the resulting population is stored in "final_population"; the best individual is on the top
