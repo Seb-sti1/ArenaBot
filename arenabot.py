@@ -6,11 +6,10 @@ import inspyred
 import random
 import math
 import numpy as np
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import Polygon, LineString, Point
 
 random_number_generator = random.Random()
-random_number_generator.seed(
-    42)  # remember, seeding the generators with a fixed value ensures that you will always obtain the same sequence of numbers at every run
+random_number_generator.seed(42)  # seeding the generators with a fixed value ensures that you will always obtain the same sequence of numbers at every run
 
 
 def moveRobot(robotX, robotY, robotDegrees, distance):
@@ -86,17 +85,47 @@ def fitnessRobot(listOfCommands, visualize=True):
 
     robotX, robotY, robotDegrees, positions = applicateCommands(robotX, robotY, robotDegrees, listOfCommands)
 
-    distanceFromObjective = 0
+    distanceFromObjective = math.sqrt((robotX - objectiveX) ** 2 + (robotY - objectiveY) ** 2)
 
     if len(positions) > 1:
         line = LineString(positions)
 
-        intersectionMalus = 100
+        intersectionMalus = 300
 
         if line.intersects(labyrinthe_wall1) or line.intersects(labyrinthe_wall2) or line.intersects(labyrinthe_arena):
             distanceFromObjective += intersectionMalus
 
-        distanceFromObjective += math.sqrt((robotX - objectiveX) ** 2 + (robotY - objectiveY) ** 2)
+
+    # distance to the walls
+
+    distanceThresholdForMalus = 2
+    malusGain = 0.2
+    closeToWallMalus = 0 # init malus to 0
+
+    '''
+    for k in range(len(positions)-1):
+        print(positions[k])
+        currentLine = LineString((positions[k]), (positions[k+1]))
+        distanceFromWall1 = labyrinthe_wall1.exterior.distance(currentLine)
+        distanceFromWall2 = labyrinthe_wall2.exterior.distance(currentLine)
+        
+        # if the distance to the wall is below a threshold, the added malus to the fitness is greater as the path of the robot is close to the walls
+        if distanceFromWall1 < distanceThresholdForMalus :
+            closeToWallMalus += malusGain*(1-distanceFromWall1/distanceThresholdForMalus)
+        if distanceFromWall2 < distanceThresholdForMalus :
+            closeToWallMalus += malusGain*(1-distanceFromWall2/distanceThresholdForMalus)
+    '''
+
+    distanceFromWall1 = labyrinthe_wall1.exterior.distance(line)
+    distanceFromWall2 = labyrinthe_wall2.exterior.distance(line)
+    
+    # if the distance to the wall is below a threshold, the added malus to the fitness is greater as the path of the robot is close to the walls
+    if distanceFromWall1 < distanceThresholdForMalus :
+        closeToWallMalus += malusGain*(1-distanceFromWall1/distanceThresholdForMalus)
+    if distanceFromWall2 < distanceThresholdForMalus :
+        closeToWallMalus += malusGain*(1-distanceFromWall2/distanceThresholdForMalus)
+
+    fitness = distanceFromObjective + closeToWallMalus
 
     # this is optional, argument "visualize" has to be explicitly set to "True" when function is called
     if visualize:
@@ -116,15 +145,14 @@ def fitnessRobot(listOfCommands, visualize=True):
 
         # plot a series of lines describing the movement of the robot in the arena
         for i in range(1, len(positions)):
-            ax.plot([positions[i - 1][0], positions[i][0]], [positions[i - 1][1], positions[i][1]], 'r-',
-                    label="Robot path")
+            ax.plot([positions[i - 1][0], positions[i][0]], [positions[i - 1][1], positions[i][1]], 'r-') #,label="Robot path")
 
         ax.set_title("Movements of the robot inside the arena")
         ax.legend(loc='best')
         plt.ioff()
         plt.show()
 
-    return distanceFromObjective
+    return fitness
 
 
 def evaluate(candidates, args):
@@ -151,7 +179,7 @@ def generator_commands(random, args):
     # the individual will be a series of "number_of_dimensions" random values, generated between "minimum" and "maximum"
     # the individual will be a series of commands (move and rotate)
 
-    individual_length = random_number_generator.randint(5, max_individual_length) // 2 * 2
+    individual_length = random_number_generator.randint(10, max_individual_length) // 2 * 2
     individual = np.zeros(individual_length)
 
     for i in range(0, individual_length // 2):
@@ -185,10 +213,10 @@ def main():
         tournament_size=2,
         # size of the tournament selection; we need to specify it only if we need it different from 2
         crossover_rate=1.0,  # probability of applying crossover
-        mutation_rate=0.1,  # probability of applying mutation
+        mutation_rate=0.2,  # probability of applying mutation
 
         # all arguments specified below, THAT ARE NOT part of the "evolve" method, will be automatically placed in "args"
-        max_individual_length=10,  # number of dimensions of the problem, used by "generator_weierstrass"
+        max_individual_length=20,  # number of dimensions of the problem, used by "generator_weierstrass"
         minimum_angle=-90,  # minimum angle for generator_commands
         maximum_angle=90,  # maximum angle
         minimum_distance=0,  # minimum distance for generator_commands
