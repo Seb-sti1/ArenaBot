@@ -6,13 +6,36 @@ import inspyred
 import random
 import math
 import numpy as np
+from  shapely.geometry import Polygon, LineString
 
 random_number_generator = random.Random()
 random_number_generator.seed(42) # remember, seeding the generators with a fixed value ensures that you will always obtain the same sequence of numbers at every run 
 
 
+def moveRobot(robotX, robotY, robotDegrees, distance):
+	robotX += distance*math.cos(robotDegrees*math.pi/180)
+	robotY += distance*math.sin(robotDegrees*math.pi/180)
+	return [robotX, robotY]
+
+
+def rotateRobot(robotX, robotY, robotDegrees, angle):
+	return robotDegrees + angle
+
+
+def applicateCommands(robotX, robotY, robotDegrees, listOfCommands):
+	number_of_commands = len(listOfCommands)//2
+	line_points = [(robotX, robotY)]
+	print(listOfCommands)
+
+	for i in range(number_of_commands):
+		robotDegrees = rotateRobot(robotX, robotY, robotDegrees, listOfCommands[2*i])
+		[robotX, robotY] = moveRobot(robotX, robotY, robotDegrees, listOfCommands[2*i+1])
+		line_points.append((robotX, robotY))
+
+	return robotX, robotY, robotDegrees, line_points
+
 '''This function accepts in input a list of strings, and tries to parse them to update the position of a robot. Then returns distance from objective.'''
-def fitnessRobot(listOfCommands, visualize=False) :
+def fitnessRobot(listOfCommands, visualize=True) :
 
 	# the Arena is a 100 x 100 pixel space
 	arenaLength = 100
@@ -36,21 +59,31 @@ def fitnessRobot(listOfCommands, visualize=False) :
 	walls.append(wall1)
 	walls.append(wall2)
 	
+	labyrinthe_wall1 = Polygon([(wall1["x"], wall1["y"]), (wall1["x"]+wall1["width"], wall1["y"]), (wall1["x"]+wall1["width"], wall1["y"]+wall1["height"]), (wall1["x"], wall1["y"]+wall1["height"])])
+	labyrinthe_wall2 = Polygon([(wall2["x"], wall2["y"]), (wall2["x"]+wall2["width"], wall2["y"]), (wall2["x"]+wall2["width"], wall2["y"]+wall2["height"]), (wall2["x"], wall2["y"]+wall2["height"])])
+
 	# initial position and orientation of the robot
 	startX = robotX = 10
 	startY = robotY = 10
-	startDegrees = 90 # 90°
+	startDegrees = robotDegrees = 90 # 90°
 	
 	# position of the objective
 	objectiveX = 90
 	objectiveY = 90
 	
 	# this is a list of points that the robot will visit; used later to visualize its path
-	positions = []
-	positions.append( [robotX, robotY] )
+
 	
-	# TODO move robot, check that the robot stays inside the arena and stop movement if a wall is hit
-	# TODO measure distance from objective
+	# move robot, check that the robot stays inside the arena and stop movement if a wall is hit
+
+	robotX, robotY, robotDegrees, positions = applicateCommands(robotX, robotY, robotDegrees, listOfCommands)
+
+	line = LineString(positions)
+
+	if line.intersects(labyrinthe_wall1) or line.intersects(labyrinthe_wall2):
+		distanceFromObjective = np.inf
+
+
 	distanceFromObjective = math.sqrt((robotX-objectiveX)**2-(robotY-objectiveY)**2)
 	
 	# this is optional, argument "visualize" has to be explicitly set to "True" when function is called
@@ -79,6 +112,8 @@ def fitnessRobot(listOfCommands, visualize=False) :
 
 	return distanceFromObjective
 
+def evaluate(candidates, args):
+	return fitnessRobot(candidates, False)
 
 # this function generates initial random commands for the robot; it needs a random number generator (called "random") and a dictionary or arguments in input,
 # to be used by the EvolutionaryComputation object; returns one (randomly generated) candidate individual
@@ -89,17 +124,18 @@ def generator_commands(random, args) :
 	minimum_distance = args["minimum_distance"] # also, the minimum value of each dimension will be specified later in "args"
 	maximum_distance = args["maximum_distance"] # same goes for the maximum value
 
-	max_individual_length = args["max_individual_length"]//2
+	max_individual_length = args["max_individual_length"]
 
 	# the individual will be a series of "number_of_dimensions" random values, generated between "minimum" and "maximum"
 	# the individual will be a series of commands (move and rotate)
 
-	individual_length = random_number_generator.randint(1, max_individual_length)
+	individual_length = random_number_generator.randint(1, max_individual_length)//2*2
 	individual = np.zeros(individual_length)
 
-	for i in range(0, individual_length):
-		individual[i] = random_number_generator.uniform(minimum_angle, maximum_angle)
-		individual[i] = random_number_generator.uniform(minimum_distance, maximum_distance)
+
+	for i in range(0, individual_length//2):
+		individual[2*i] = random_number_generator.uniform(minimum_angle, maximum_angle)
+		individual[2*i+1] = random_number_generator.uniform(minimum_distance, maximum_distance)
 
 	return individual
 
@@ -117,7 +153,7 @@ evolutionary_algorithm.terminator = inspyred.ec.terminators.evaluation_terminati
 evolutionary_algorithm.observer = inspyred.ec.observers.plot_observer # plots evolution
 final_population = evolutionary_algorithm.evolve( 
                                generator = generator_commands, # of course, we need to specify the evaluator
-                               evaluator = fitnessRobot, # and the corresponding evaluator
+                               evaluator = evaluate, # and the corresponding evaluator
                                pop_size = 100, # size of the population
                                num_selected = 200, # size of the offspring (children individuals)
                                maximize = False, # this is a minimization problem, but inspyred can also manage maximization problem
@@ -127,7 +163,7 @@ final_population = evolutionary_algorithm.evolve(
                                mutation_rate = 0.1, # probability of applying mutation
                                
                                # all arguments specified below, THAT ARE NOT part of the "evolve" method, will be automatically placed in "args"
-                               max_individual_length = 50, # number of dimensions of the problem, used by "generator_weierstrass"
+                               max_individual_length = 10, # number of dimensions of the problem, used by "generator_weierstrass"
                                minimum_angle = -90, # minimum angle for generator_commands
                                maximum_angle = 90, # maximum angle
 							   minimum_distance = 0, # minimum distance for generator_commands
