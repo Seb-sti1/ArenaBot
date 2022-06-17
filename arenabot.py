@@ -69,6 +69,8 @@ def fitnessRobot(listOfCommands, visualize=True):
                                 (wall2["x"] + wall2["width"], wall2["y"] + wall2["height"]),
                                 (wall2["x"], wall2["y"] + wall2["height"])])
 
+    labyrinthe_arena = LineString([(0, 0), (0, arenaLength), (arenaWidth, arenaLength), (arenaWidth, 0), (0, 0)])
+
     # initial position and orientation of the robot
     startX = robotX = 10
     startY = robotY = 10
@@ -91,7 +93,7 @@ def fitnessRobot(listOfCommands, visualize=True):
 
         intersectionMalus = 100
 
-        if line.intersects(labyrinthe_wall1) or line.intersects(labyrinthe_wall2):
+        if line.intersects(labyrinthe_wall1) or line.intersects(labyrinthe_wall2) or line.intersects(labyrinthe_arena):
             distanceFromObjective += intersectionMalus
 
         distanceFromObjective += math.sqrt((robotX - objectiveX) ** 2 + (robotY - objectiveY) ** 2)
@@ -175,10 +177,10 @@ def main():
     final_population = evolutionary_algorithm.evolve(
         generator=generator_commands,  # of course, we need to specify the evaluator
         evaluator=evaluate,  # and the corresponding evaluator
-        pop_size=100,  # size of the population
+        pop_size=300,  # size of the population
         num_selected=200,  # size of the offspring (children individuals)
         maximize=False,  # this is a minimization problem, but inspyred can also manage maximization problem
-        max_evaluations=2000,  # maximum number of evaluations before stopping, used by the terminator
+        max_evaluations=10000,  # maximum number of evaluations before stopping, used by the terminator
         tournament_size=2,
         # size of the tournament selection; we need to specify it only if we need it different from 2
         crossover_rate=1.0,  # probability of applying crossover
