@@ -121,6 +121,7 @@ def fitnessRobot(listOfCommands, visualize=True):
 
         ax.set_title("Movements of the robot inside the arena")
         ax.legend(loc='best')
+        plt.ioff()
         plt.show()
 
     return distanceFromObjective
