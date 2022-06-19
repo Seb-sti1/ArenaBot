@@ -15,6 +15,9 @@ random_number_generator = random.Random()
 random_number_generator.seed(
     42)  # seeding the generators with a fixed value ensures that you will always obtain the same sequence of numbers at every run
 
+possible_rotations = [k * 45 for k in range(-2, 2)]
+possible_deplacements = [k * 10 for k in range(-3, 4)]
+
 
 def moveRobot(robotX, robotY, robotDegrees, distance):
     robotX += distance * math.cos(robotDegrees * math.pi / 180)
@@ -43,7 +46,6 @@ returns distance from objective. '''
 
 
 def fitnessRobot(listOfCommands, visualize=False, ax=None, isFirst=False):
-
     # the Arena is a 100 x 100 pixel space
     arenaLength = 100
     arenaWidth = 100
@@ -92,45 +94,46 @@ def fitnessRobot(listOfCommands, visualize=False, ax=None, isFirst=False):
 
     distanceFromObjective = math.sqrt((robotX - objectiveX) ** 2 + (robotY - objectiveY) ** 2)
 
+    # add a huge malus if the robot leaves the arena
     if len(positions) > 1:
         line = LineString(positions)
+        intersectionArenaMalus = 1000
+        if line.intersects(labyrinthe_arena): distanceFromObjective += intersectionArenaMalus
 
-        intersectionMalus = 500
+    # nb of walls between objective and final position of the robot
+    MalusFromHorizon = 300
+    WallsBeforeEnd = 0
 
-        if line.intersects(labyrinthe_wall1) or line.intersects(labyrinthe_wall2) or line.intersects(labyrinthe_arena):
-            distanceFromObjective += intersectionMalus
+    distanceLine = LineString([positions[-1], (objectiveX, objectiveY)])
+    if distanceLine.intersects(labyrinthe_wall1):
+        WallsBeforeEnd += MalusFromHorizon
+    if distanceLine.intersects(labyrinthe_wall2):
+        WallsBeforeEnd += MalusFromHorizon
 
-    # distance to the walls
+    # calcule the length of the path
+    LengthPath = 0
 
-    distanceThresholdForMalus = 5
-    malusGain = 8
+    # for each time the robot goes through a wall, a malus is added
+    malusGain = 100
     closeToWallMalus = 0  # init malus to 0
 
-    '''
-    for k in range(len(positions)-1): # add malus everytime the path is too close
-        print(positions[k])
-        currentLine = LineString((positions[k]), (positions[k+1]))
-        distanceFromWall1 = labyrinthe_wall1.exterior.distance(currentLine)
-        distanceFromWall2 = labyrinthe_wall2.exterior.distance(currentLine)
-        
-        # if the distance to the wall is below a threshold, the added malus to the fitness is greater as the path of the robot is close to the walls
-        if distanceFromWall1 < distanceThresholdForMalus :
-            closeToWallMalus += malusGain*(1-distanceFromWall1/distanceThresholdForMalus)
-        if distanceFromWall2 < distanceThresholdForMalus :
-            closeToWallMalus += malusGain*(1-distanceFromWall2/distanceThresholdForMalus)
-    '''
+    for k in range(len(positions) - 1):  # add malus everytime the path encounters a wall,
+        # when it encounters a wall, the nearer it is from the corner the better it is
+        currentLine = LineString([(positions[k]), (positions[k + 1])])
+        if currentLine.intersects(labyrinthe_wall1):
+            minDistanceFromCorner = min([currentLine.distance(Point(x)) for x in
+                                         [(wall1["x"], wall1["y"]), (wall1["x"] + wall1["width"], wall1["y"]),
+                                          (wall1["x"] + wall1["width"], wall1["y"] + wall1["height"]),
+                                          (wall1["x"], wall1["y"] + wall1["height"])]])
+            closeToWallMalus += malusGain + minDistanceFromCorner
+        if currentLine.intersects(labyrinthe_wall2):
+            minDistanceFromCorner = min([currentLine.distance(Point(x)) for x in
+                                         [(wall2["x"], wall2["y"]), (wall2["x"] + wall2["width"], wall2["y"]),
+                                          (wall2["x"] + wall2["width"], wall2["y"] + wall2["height"]),
+                                          (wall2["x"], wall2["y"] + wall2["height"])]])
+            closeToWallMalus += malusGain + minDistanceFromCorner
 
-    distanceFromWall1 = labyrinthe_wall1.exterior.distance(line)
-    distanceFromWall2 = labyrinthe_wall2.exterior.distance(line)
-
-    # add malus if the closest point to each walls is below threshold
-    # if the distance to the wall is below a threshold, the added malus to the fitness is greater as the path of the robot is close to the walls
-    if distanceFromWall1 < distanceThresholdForMalus:
-        closeToWallMalus += malusGain * (1 - distanceFromWall1 / distanceThresholdForMalus)
-    if distanceFromWall2 < distanceThresholdForMalus:
-        closeToWallMalus += malusGain * (1 - distanceFromWall2 / distanceThresholdForMalus)
-
-    fitness = distanceFromObjective + closeToWallMalus
+    fitness = distanceFromObjective + closeToWallMalus + WallsBeforeEnd
 
     # this is optional, argument "visualize" has to be explicitly set to "True" when function is called
     if visualize:
@@ -172,27 +175,87 @@ def evaluate(candidates, args):
 # this function generates initial random commands for the robot; it needs a random number generator (called "random") and a dictionary or arguments in input,
 # to be used by the EvolutionaryComputation object; returns one (randomly generated) candidate individual
 def generator_commands(random, args):
-    minimum_angle = args["minimum_angle"]  # also, the minimum value of each dimension will be specified later in "args"
-    maximum_angle = args["maximum_angle"]  # same goes for the maximum value
-
-    minimum_distance = args[
-        "minimum_distance"]  # also, the minimum value of each dimension will be specified later in "args"
-    maximum_distance = args["maximum_distance"]  # same goes for the maximum value
-
     max_individual_length = args["max_individual_length"]
     min_individual_length = args["min_individual_length"]
 
     # the individual will be a series of "number_of_dimensions" random values, generated between "minimum" and "maximum"
     # the individual will be a series of commands (move and rotate)
 
-    individual_length = random_number_generator.randint(min_individual_length, max_individual_length) // 2 * 2
+    individual_length = random.randint(min_individual_length, max_individual_length) // 2 * 2
     individual = np.zeros(individual_length)
 
     for i in range(0, individual_length // 2):
-        individual[2 * i] = random_number_generator.uniform(minimum_angle, maximum_angle)
-        individual[2 * i + 1] = random_number_generator.uniform(minimum_distance, maximum_distance)
+        individual[2 * i] = possible_rotations[random.randint(0, len(possible_rotations) - 1)]
+        individual[2 * i + 1] = possible_deplacements[random.randint(0, len(possible_deplacements) - 1)]
 
     return individual
+
+
+def crossover(random, candidates, args):
+    crossover_rate = args.get('crossover_rate', 0.5)
+    mutants = []
+    for c in candidates:
+        if random.uniform(0, 1) < crossover_rate:
+            c1 = c.copy()
+            c2 = random.choice(candidates).copy()
+
+            crossover_start = random.randint(0, min(len(c1), len(c2)) - 1)
+            crossover_len = random.randint(0, min(len(c1) - crossover_start, len(c2) - crossover_start) - 1)
+
+            c1[crossover_start: crossover_start + crossover_len], \
+            c2[crossover_start: crossover_start + crossover_len] = \
+                c2[crossover_start: crossover_start + crossover_len], \
+                c1[crossover_start: crossover_start + crossover_len]
+            mutants.append(c1)
+            mutants.append(c2)
+
+    return mutants
+
+
+def mutation(random, candidates, args):
+    mutation_rate = args.get('mutation_rate', 0.1)
+    mutants = []
+    for c in candidates:
+        if random.uniform(0, 1) < mutation_rate:
+            c1 = c.copy()
+
+            mutation_idx = random.randint(0, len(c1) - 1)
+
+            if mutation_idx % 2 == 0:
+                c1[mutation_idx] = possible_rotations[
+                    (possible_rotations.index(c1[mutation_idx]) + random.randint(0, len(possible_rotations) - 1)) % len(
+                        possible_rotations)]
+            else:
+                c1[mutation_idx] = possible_deplacements[
+                    (possible_deplacements.index(c1[mutation_idx]) + random.randint(0,
+                                                                                    len(possible_deplacements))) % len(
+                        possible_deplacements)]
+            mutants.append(c1)
+
+    return mutants
+
+
+def insertion(random, candidates, args):
+    insertion_rate = args.get('insertion_rate', 0.1)
+    mutants = []
+    for c in candidates:
+        if random.uniform(0, 1) < insertion_rate:
+            c2 = random.choice(candidates)
+
+            insertion_position = random.randint(0, len(c) // 2) * 2
+            insertion_start = random.randint(0, len(c2) // 2 - 1) * 2
+            insertion_len = random.randint(0, (len(c2) - insertion_start) // 2) * 2
+
+            c1 = np.zeros(len(c) + insertion_len)
+
+            c1[0:insertion_position] = c[0:insertion_position]
+            c1[insertion_position:insertion_position + insertion_len] =\
+                c2[insertion_start:insertion_start+insertion_len]
+            c1[insertion_position + insertion_len: len(c) + insertion_len] = c[insertion_position:len(c)]
+
+            mutants.append(c1)
+
+    return mutants
 
 
 ################# MAIN
@@ -201,8 +264,9 @@ def main():
     evolutionary_algorithm = inspyred.ec.EvolutionaryComputation(random_number_generator)
     # and now, we specify every part of the evolutionary algorithm
     evolutionary_algorithm.selector = inspyred.ec.selectors.tournament_selection  # by default, tournament selection has tau=2 (two individuals), but it can be modified (see below)
-    evolutionary_algorithm.variator = [inspyred.ec.variators.uniform_crossover,
-                                       inspyred.ec.variators.gaussian_mutation]  # the genetic operators are put in a list, and executed one after the other
+    evolutionary_algorithm.variator = [crossover,
+                                       mutation,
+                                       insertion]  # the genetic operators are put in a list, and executed one after the other
     evolutionary_algorithm.replacer = inspyred.ec.replacers.plus_replacement  # "plus" -> "mu+lambda"
     evolutionary_algorithm.terminator = inspyred.ec.terminators.evaluation_termination  # the algorithm terminates when a given number of evaluations (see below) is reached
 
@@ -212,22 +276,19 @@ def main():
     final_population = evolutionary_algorithm.evolve(
         generator=generator_commands,  # of course, we need to specify the evaluator
         evaluator=evaluate,  # and the corresponding evaluator
-        pop_size=300,  # size of the population
-        num_selected=200,  # size of the offspring (children individuals)
+        pop_size=1200,  # size of the population
+        num_selected=300,  # size of the offspring (children individuals)
         maximize=False,  # this is a minimization problem, but inspyred can also manage maximization problem
-        max_evaluations=10000,  # maximum number of evaluations before stopping, used by the terminator
-        tournament_size=2,
+        max_evaluations=50000,  # maximum number of evaluations before stopping, used by the terminator
+        tournament_size=3,
         # size of the tournament selection; we need to specify it only if we need it different from 2
-        crossover_rate=1.0,  # probability of applying crossover
+        crossover_rate=0.6,  # probability of applying crossover
         mutation_rate=0.2,  # probability of applying mutation
+        insertion_rate=0.1,
 
         # all arguments specified below, THAT ARE NOT part of the "evolve" method, will be automatically placed in "args"
-        min_individual_length=30,
-        max_individual_length=100,  # number of dimensions of the problem, used by "generator_weierstrass"
-        minimum_angle=-90,  # minimum angle for generator_commands
-        maximum_angle=90,  # maximum angle
-        minimum_distance=0,  # minimum distance for generator_commands
-        maximum_distance=10,  # minimum angle
+        min_individual_length=10,
+        max_individual_length=50
     )
 
     # after the evolution is over, the resulting population is stored in "final_population"; the best individual is on the top
@@ -237,10 +298,11 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-
+    print(len(final_population))
 
     for i in range(len(final_population)):
-        fitnessRobot(final_population[len(final_population) - 1 - i].candidate, visualize=True, ax=ax, isFirst=(i==len(final_population) - 1))
+        fitnessRobot(final_population[len(final_population) - 1 - i].candidate, visualize=True, ax=ax,
+                     isFirst=(i == len(final_population) - 1))
 
     plt.ioff()
     plt.show()
