@@ -212,22 +212,22 @@ def main():
     final_population = evolutionary_algorithm.evolve(
         generator=generator_commands,  # of course, we need to specify the evaluator
         evaluator=evaluate,  # and the corresponding evaluator
-        pop_size=300,  # size of the population
-        num_selected=200,  # size of the offspring (children individuals)
+        pop_size=600,  # size of the population
+        num_selected=500,  # size of the offspring (children individuals)
         maximize=False,  # this is a minimization problem, but inspyred can also manage maximization problem
-        max_evaluations=10000,  # maximum number of evaluations before stopping, used by the terminator
+        max_evaluations=50000,  # maximum number of evaluations before stopping, used by the terminator
         tournament_size=2,
         # size of the tournament selection; we need to specify it only if we need it different from 2
-        crossover_rate=1.0,  # probability of applying crossover
-        mutation_rate=0.2,  # probability of applying mutation
+        crossover_rate=2,  # probability of applying crossover
+        mutation_rate=15,  # probability of applying mutation
 
         # all arguments specified below, THAT ARE NOT part of the "evolve" method, will be automatically placed in "args"
-        min_individual_length=30,
+        min_individual_length=20,
         max_individual_length=100,  # number of dimensions of the problem, used by "generator_weierstrass"
         minimum_angle=-90,  # minimum angle for generator_commands
         maximum_angle=90,  # maximum angle
         minimum_distance=0,  # minimum distance for generator_commands
-        maximum_distance=10,  # minimum angle
+        maximum_distance=20,  # minimum angle
     )
 
     # after the evolution is over, the resulting population is stored in "final_population"; the best individual is on the top
