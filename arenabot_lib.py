@@ -50,7 +50,7 @@ def plot_generation(population, walls, arena, start, objective, generation=None)
 
     # plot initial position and objective
     ax.plot(start[0], start[1], 'r^', label="Initial position of the robot")
-    ax.plot(objective[0], objective[0], 'gx', label="Position of the objective")
+    ax.plot(objective[0], objective[1], 'gx', label="Position of the objective")
 
     for i in range(1, len(arena)):
         ax.plot([arena[i - 1][0], arena[i][0]], [arena[i - 1][1], arena[i][1]],
