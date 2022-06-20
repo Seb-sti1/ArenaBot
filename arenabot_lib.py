@@ -25,13 +25,9 @@ def applicateCommands(robotX, robotY, robotDegrees, listOfCommands):
     return robotX, robotY, robotDegrees, line_points
 
 
-def plot_generation(population, walls, start, objective, generation=None):
+def plot_generation(population, walls, arena, start, objective, generation=None):
     figure = plt.figure()
     ax = figure.add_subplot(111)
-
-    # plot initial position and objective
-    ax.plot(start[0], start[1], 'r^', label="Initial position of the robot")
-    ax.plot(objective[0], objective[0], 'gx', label="Position of the objective")
 
     # plot a series of lines describing the movement of the robot in the arena
     for j in range(len(population)):
@@ -41,6 +37,7 @@ def plot_generation(population, walls, start, objective, generation=None):
             ax.plot([positions[i - 1][0], positions[i][0]], [positions[i - 1][1], positions[i][1]],
                     color='lightcoral')  # ,label="Robot path")
 
+    print("Best : %f" % population[0].fitness)
     listOfCommands = population[0].candidate
     robotX, robotY, robotDegrees, positions = applicateCommands(start[0], start[1], start[2], listOfCommands)
     for i in range(1, len(positions)):
@@ -50,6 +47,14 @@ def plot_generation(population, walls, start, objective, generation=None):
     # plot the walls
     for wall in walls:
         ax.add_patch(patches.Rectangle((wall["x"], wall["y"]), wall["width"], wall["height"]))
+
+    # plot initial position and objective
+    ax.plot(start[0], start[1], 'r^', label="Initial position of the robot")
+    ax.plot(objective[0], objective[0], 'gx', label="Position of the objective")
+
+    for i in range(1, len(arena)):
+        ax.plot([arena[i - 1][0], arena[i][0]], [arena[i - 1][1], arena[i][1]],
+                'b-')  # ,label="Robot path")
 
     if generation is None:
         ax.set_title("Movements of the robot inside the arena")
@@ -67,9 +72,10 @@ def observer(population, num_generations, num_evaluations, args):
     startDegrees = args["startDegrees"]
     objectiveX = args["objectiveX"]
     objectiveY = args["objectiveY"]
+    arena = args["arena"]
 
     max_evaluations = args.get('max_evaluations', 10000)
 
-    if num_generations in [0, 1, 2, 3] or num_generations % 20 == 0:  # tous les 10%
-        plot_generation(population, walls, [startX, startY, startDegrees], [objectiveX, objectiveY],
+    if num_generations % 20 == 0:  # tous les 10%
+        plot_generation(population, walls, arena, [startX, startY, startDegrees], [objectiveX, objectiveY],
                         generation=num_generations)

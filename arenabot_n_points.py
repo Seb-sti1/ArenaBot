@@ -45,8 +45,8 @@ labyrinthe_wall1 = Polygon([(wall1["x"], wall1["y"]), (wall1["x"] + wall1["width
 labyrinthe_wall2 = Polygon([(wall2["x"], wall2["y"]), (wall2["x"] + wall2["width"], wall2["y"]),
                             (wall2["x"] + wall2["width"], wall2["y"] + wall2["height"]),
                             (wall2["x"], wall2["y"] + wall2["height"])])
-
-labyrinthe_arena = LineString([(0, 0), (0, arenaLength), (arenaWidth, arenaLength), (arenaWidth, 0), (0, 0)])
+labyrinthe_line = [(0, 0), (0, arenaLength), (arenaWidth, arenaLength), (arenaWidth, 0), (0, 0)]
+labyrinthe_arena = LineString(labyrinthe_line)
 
 
 def fitnessRobot(listOfCommands, args):
@@ -152,7 +152,30 @@ def generator_commands(random, args):
     return individual
 
 
-################# MAIN
+def insertion(random, candidates, args):
+    insertion_rate = args.get('insertion_rate', 0.1)
+    mutants = []
+    for c in candidates:
+        if random.uniform(0, 1) < insertion_rate:
+            c2 = random.choice(candidates)
+
+            insertion_position = random.randint(0, len(c) // 2) * 2
+            insertion_start = random.randint(0, len(c2) // 2 - 1) * 2
+            insertion_len = random.randint(0, (len(c2) - insertion_start) // 2) * 2
+
+            c1 = np.zeros(len(c) + insertion_len)
+
+            c1[0:insertion_position] = c[0:insertion_position]
+            c1[insertion_position:insertion_position + insertion_len] = \
+                c2[insertion_start:insertion_start + insertion_len]
+            c1[insertion_position + insertion_len: len(c) + insertion_len] = c[insertion_position:len(c)]
+
+            mutants.append(c1)
+
+    return mutants
+
+
+# ================ MAIN
 def main():
     global walls
 
@@ -166,7 +189,7 @@ def main():
     evolutionary_algorithm = inspyred.ec.EvolutionaryComputation(random_number_generator)
     # and now, we specify every part of the evolutionary algorithm
     evolutionary_algorithm.selector = inspyred.ec.selectors.tournament_selection  # by default, tournament selection has tau=2 (two individuals), but it can be modified (see below)
-    evolutionary_algorithm.variator = [inspyred.ec.variators.uniform_crossover,
+    evolutionary_algorithm.variator = [insertion,
                                        inspyred.ec.variators.n_point_crossover,
                                        inspyred.ec.variators.gaussian_mutation]  # the genetic operators are put in a list, and executed one after the other
     evolutionary_algorithm.replacer = inspyred.ec.replacers.plus_replacement  # "plus" -> "mu+lambda"
@@ -187,7 +210,7 @@ def main():
         crossover_rate=1.0,  # probability of applying crossover
         num_crossover_points=3,  # number of crossover point used
         mutation_rate=4,  # probability of applying mutation
-
+        insertion_rate=0.1,
         # all arguments specified below, THAT ARE NOT part of the "evolve" method, will be automatically placed in "args"
         min_individual_length=20,
         max_individual_length=50,  # number of dimensions of the problem, used by "generator_weierstrass"
@@ -201,7 +224,8 @@ def main():
         startY=startY,
         startDegrees=startDegrees,
         objectiveX=objectiveX,
-        objectiveY=objectiveY
+        objectiveY=objectiveY,
+        arena=labyrinthe_line
     )
 
     # after the evolution is over, the resulting population is stored in "final_population";
