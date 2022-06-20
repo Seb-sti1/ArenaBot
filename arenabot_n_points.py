@@ -204,7 +204,7 @@ def main():
         pop_size=1500,  # size of the population
         num_selected=700,  # size of the offspring (children individuals)
         maximize=False,  # this is a minimization problem, but inspyred can also manage maximization problem
-        max_evaluations=150000,  # maximum number of evaluations before stopping, used by the terminator
+        max_evaluations=100000,  # maximum number of evaluations before stopping, used by the terminator
         tournament_size=2,
         # size of the tournament selection; we need to specify it only if we need it different from 2
         crossover_rate=1.0,  # probability of applying crossover

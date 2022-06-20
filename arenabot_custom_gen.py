@@ -53,7 +53,8 @@ labyrinthe_wall2 = Polygon([(wall2["x"], wall2["y"]), (wall2["x"] + wall2["width
                             (wall2["x"] + wall2["width"], wall2["y"] + wall2["height"]),
                             (wall2["x"], wall2["y"] + wall2["height"])])
 
-labyrinthe_arena = LineString([(0, 0), (0, arenaLength), (arenaWidth, arenaLength), (arenaWidth, 0), (0, 0)])
+labyrinthe_line = [(0, 0), (0, arenaLength), (arenaWidth, arenaLength), (arenaWidth, 0), (0, 0)]
+labyrinthe_arena = LineString(labyrinthe_line)
 
 
 def fitnessRobot(listOfCommands, args):
@@ -249,11 +250,11 @@ def main():
         num_selected=500,  # size of the offspring (children individuals)
         maximize=False,  # this is a minimization problem, but inspyred can also manage maximization problem
         max_evaluations=50000,  # maximum number of evaluations before stopping, used by the terminator
-        tournament_size=3,
+        tournament_size=2,
         # size of the tournament selection; we need to specify it only if we need it different from 2
-        crossover_rate=0.65,  # probability of applying crossover
-        mutation_rate=0.35,  # probability of applying mutation
-        insertion_rate=0.07,
+        crossover_rate=0.7,  # probability of applying crossover
+        mutation_rate=0.5,  # probability of applying mutation
+        insertion_rate=0.1,
 
         # all arguments specified below, THAT ARE NOT part of the "evolve" method, will be automatically placed in "args"
         min_individual_length=10,
@@ -264,7 +265,8 @@ def main():
         startY=startY,
         startDegrees=startDegrees,
         objectiveX=objectiveX,
-        objectiveY=objectiveY
+        objectiveY=objectiveY,
+        arena=labyrinthe_line
     )
 
     # after the evolution is over, the resulting population is stored in "final_population";
