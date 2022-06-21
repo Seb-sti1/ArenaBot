@@ -12,15 +12,15 @@ import arenabot_fitness as fit
 import arenabot_lib as lib
 
 random_number_generator = random.Random()
-print("Seed %f" % time.time())
-random_number_generator.seed(time.time())  # seeding the generators with a fixed value ensures that
+random_number_generator.seed(
+    time.time())  # seeding the generators with a fixed value ensures that
 # you will always obtain the same sequence of numbers at every run
 
 walls = []
 
-# the Arena is a 100 x 100 pixel space
+# the Arena is a 170 x 100 pixel space
 arenaLength = 100
-arenaWidth = 100
+arenaWidth = 150
 
 # let's also put a couple of walls in the arena; walls are described by a set of 4 (x,y)
 # corners (bottom-left, top-left, top-right, bottom-right)
@@ -36,8 +36,15 @@ wall2["y"] = 20
 wall2["width"] = 10
 wall2["height"] = 80
 
+wall3 = dict()
+wall3["x"] = 110
+wall3["y"] = 0
+wall3["width"] = 10
+wall3["height"] = 80
+
 walls.append(wall1)
 walls.append(wall2)
+walls.append(wall3)
 
 labyrinthe_line = [(0, 0), (0, arenaLength), (arenaWidth, arenaLength), (arenaWidth, 0), (0, 0)]
 
@@ -122,8 +129,8 @@ def main():
     startX = 10
     startY = 10
     startDegrees = 90
-    objectiveX = 90
-    objectiveY = 90
+    objectiveX = 140
+    objectiveY = 10
 
     # instantiate the evolutionary algorithm object
     evolutionary_algorithm = inspyred.ec.EvolutionaryComputation(random_number_generator)
