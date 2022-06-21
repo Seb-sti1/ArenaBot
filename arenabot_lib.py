@@ -9,7 +9,7 @@ def moveRobot(robotX, robotY, robotDegrees, distance):
     return [robotX, robotY]
 
 
-def rotateRobot(robotX, robotY, robotDegrees, angle):
+def rotateRobot(robotDegrees, angle):
     return robotDegrees + angle
 
 
@@ -18,7 +18,7 @@ def applicateCommands(robotX, robotY, robotDegrees, listOfCommands):
     line_points = [(robotX, robotY)]
 
     for i in range(number_of_commands):
-        robotDegrees = rotateRobot(robotX, robotY, robotDegrees, listOfCommands[2 * i])
+        robotDegrees = rotateRobot(robotDegrees, listOfCommands[2 * i])
         [robotX, robotY] = moveRobot(robotX, robotY, robotDegrees, listOfCommands[2 * i + 1])
         line_points.append((robotX, robotY))
 
@@ -74,8 +74,7 @@ def observer(population, num_generations, num_evaluations, args):
     objectiveY = args["objectiveY"]
     arena = args["arena"]
 
-    max_evaluations = args.get('max_evaluations', 10000)
-
     if num_generations % 20 == 0:  # tous les 10%
         plot_generation(population, walls, arena, [startX, startY, startDegrees], [objectiveX, objectiveY],
                         generation=num_generations)
+

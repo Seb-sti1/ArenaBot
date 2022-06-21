@@ -1,18 +1,15 @@
 # Simple script that simulates a bot moving inside an Arena, following a series of commands
 # by Alberto Tonda, 2018 <alberto.tonda@gmail.com>
 
+import random
 import sys
 import time
 
 import inspyred
-import random
-import math
 import numpy as np
-from shapely.geometry import Polygon, LineString, Point
+from shapely.geometry import Polygon, LineString
 
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-
+import arenabot_fitness as fit
 import arenabot_lib as lib
 
 possible_rotations = [k * 45 for k in range(-2, 2)]
@@ -57,67 +54,11 @@ labyrinthe_line = [(0, 0), (0, arenaLength), (arenaWidth, arenaLength), (arenaWi
 labyrinthe_arena = LineString(labyrinthe_line)
 
 
-def fitnessRobot(listOfCommands, args):
-    walls = args["walls"]
-    startX = args["startX"]
-    startY = args["startY"]
-    startDegrees = args["startDegrees"]
-    objectiveX = args["objectiveX"]
-    objectiveY = args["objectiveY"]
-
-    # this is a list of points that the robot will visit; used later to visualize its path
-    robotX, robotY, robotDegrees, positions = lib.applicateCommands(startX, startY, startDegrees, listOfCommands)
-
-    distanceFromObjective = math.sqrt((robotX - objectiveX) ** 2 + (robotY - objectiveY) ** 2)
-
-    # move robot, check that the robot stays inside the arena and stop movement if a wall is hit
-    # add a huge malus if the robot leaves the arena
-    if len(positions) > 1:
-        line = LineString(positions)
-        intersectionArenaMalus = 1000
-        if line.intersects(labyrinthe_arena):
-            distanceFromObjective += intersectionArenaMalus * (1 + labyrinthe_arena.distance(Point(positions[-1])) / 20)
-
-    # nb of walls between objective and final position of the robot
-    MalusFromHorizon = 300
-    WallsBeforeEnd = 0
-
-    distanceLine = LineString([positions[-1], (objectiveX, objectiveY)])
-    if distanceLine.intersects(labyrinthe_wall1):
-        WallsBeforeEnd += MalusFromHorizon
-    if distanceLine.intersects(labyrinthe_wall2):
-        WallsBeforeEnd += MalusFromHorizon
-
-    # for each time the robot goes through a wall, a malus is added
-    malusGain = 100
-    closeToWallMalus = 0  # init malus to 0
-
-    for k in range(len(positions) - 1):  # add malus everytime the path encounters a wall,
-        # when it encounters a wall, the nearer it is from the corner the better it is
-        currentLine = LineString([(positions[k]), (positions[k + 1])])
-        if currentLine.intersects(labyrinthe_wall1):
-            minDistanceFromCorner = min([currentLine.distance(Point(x)) for x in
-                                         [(wall1["x"], wall1["y"]), (wall1["x"] + wall1["width"], wall1["y"]),
-                                          (wall1["x"] + wall1["width"], wall1["y"] + wall1["height"]),
-                                          (wall1["x"], wall1["y"] + wall1["height"])]])
-            closeToWallMalus += malusGain + minDistanceFromCorner
-        if currentLine.intersects(labyrinthe_wall2):
-            minDistanceFromCorner = min([currentLine.distance(Point(x)) for x in
-                                         [(wall2["x"], wall2["y"]), (wall2["x"] + wall2["width"], wall2["y"]),
-                                          (wall2["x"] + wall2["width"], wall2["y"] + wall2["height"]),
-                                          (wall2["x"], wall2["y"] + wall2["height"])]])
-            closeToWallMalus += malusGain + minDistanceFromCorner
-
-    fitness = distanceFromObjective + closeToWallMalus + WallsBeforeEnd
-
-    return fitness
-
-
 def evaluate(candidates, args):
     scores = []
 
     for candidate in candidates:
-        scores.append(fitnessRobot(candidate, args))
+        scores.append(fit.mainFitnessRobot(candidate, args))
 
     return scores
 
@@ -274,7 +215,8 @@ def main():
     best_individual = final_population[0]
     print("The best individual has fitness %.2f" % best_individual.fitness)
 
-    lib.plot_generation(final_population, walls, [startX, startY, startDegrees], [objectiveX, objectiveY])
+    lib.plot_generation(final_population, walls, labyrinthe_line, [startX, startY, startDegrees],
+                        [objectiveX, objectiveY])
 
     return 0
 
